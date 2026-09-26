@@ -1,6 +1,7 @@
 package com.ridelink.drivervehicle.service;
 
 import com.ridelink.drivervehicle.dto.*;
+import com.ridelink.drivervehicle.exception.ResourceNotFoundException;
 import com.ridelink.drivervehicle.model.Driver;
 import com.ridelink.drivervehicle.model.Vehicle;
 import com.ridelink.drivervehicle.repository.DriverRepository;
@@ -39,14 +40,14 @@ public class DriverService {
     // Get Driver by ID
     public DriverResponse getDriverById(String id) {
         Driver driver = driverRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Driver not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Driver not found with id: " + id));
         return mapToResponse(driver);
     }
 
     // Update Availability
     public DriverResponse updateAvailability(String id, UpdateAvailabilityRequest request) {
         Driver driver = driverRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Driver not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Driver not found with id: " + id));
 
         String availability = request.getAvailability().toUpperCase();
         if (!List.of("AVAILABLE", "BUSY", "OFFLINE").contains(availability)) {
@@ -63,7 +64,7 @@ public class DriverService {
     // Update Location
     public DriverResponse updateLocation(String id, UpdateLocationRequest request) {
         Driver driver = driverRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Driver not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Driver not found with id: " + id));
 
         driver.setCurrentLatitude(request.getLatitude());
         driver.setCurrentLongitude(request.getLongitude());
@@ -93,8 +94,7 @@ public class DriverService {
     public Vehicle addVehicle(String driverId, CreateVehicleRequest request) {
         // Check if driver exists
         driverRepository.findById(driverId)
-                .orElseThrow(() -> new RuntimeException("Driver not found with id: " + driverId));
-
+                .orElseThrow(() -> new ResourceNotFoundException("Driver not found with id: " + driverId));
         Vehicle vehicle = new Vehicle();
         vehicle.setDriverId(driverId);
         vehicle.setMake(request.getMake());
