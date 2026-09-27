@@ -4,6 +4,7 @@ import com.ridelink.drivervehicle.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -24,7 +25,7 @@ public class SecurityConfig {
                 http
                                 .csrf(csrf -> csrf.disable())
                                 .authorizeHttpRequests(auth -> auth
-                                                // Allow these without token
+                                                // Allow public Swagger/test endpoints and the driver creation endpoint for local testing
                                                 .requestMatchers(
                                                                 "/swagger-ui/**",
                                                                 "/swagger-ui.html",
@@ -35,6 +36,7 @@ public class SecurityConfig {
                                                                 "/api/drivers/available",
                                                                 "/api/drivers/available/**")
                                                 .permitAll()
+                                                .requestMatchers(HttpMethod.POST, "/api/drivers").permitAll()
 
                                                 // All other endpoints need a valid JWT
                                                 .anyRequest().authenticated())
