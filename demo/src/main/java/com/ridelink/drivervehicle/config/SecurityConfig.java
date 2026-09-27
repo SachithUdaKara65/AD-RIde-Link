@@ -13,7 +13,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity // ← This is the important line for @PreAuthorize
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -24,17 +24,19 @@ public class SecurityConfig {
                 http
                                 .csrf(csrf -> csrf.disable())
                                 .authorizeHttpRequests(auth -> auth
-                                                // Public endpoints
+                                                // Allow these without token
                                                 .requestMatchers(
                                                                 "/swagger-ui/**",
                                                                 "/swagger-ui.html",
                                                                 "/v3/api-docs/**",
                                                                 "/api-docs/**",
                                                                 "/actuator/**",
-                                                                "/api/test/**" // still temporary
-                                                ).permitAll()
+                                                                "/api/test/**",
+                                                                "/api/drivers/available",
+                                                                "/api/drivers/available/**")
+                                                .permitAll()
 
-                                                // All other endpoints will be controlled by @PreAuthorize
+                                                // All other endpoints need a valid JWT
                                                 .anyRequest().authenticated())
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))

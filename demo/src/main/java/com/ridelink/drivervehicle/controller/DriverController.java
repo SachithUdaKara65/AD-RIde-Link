@@ -52,9 +52,9 @@ public class DriverController {
         return ResponseEntity.ok(driverService.updateLocation(id, request));
     }
 
-    // Get Available Drivers - can be called by Ride Management Service
+    // Get Available Drivers - PUBLIC (no token needed)
+    // This allows Ride Management Service to call it easily
     @GetMapping("/available")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PASSENGER', 'DRIVER')")
     public ResponseEntity<List<DriverResponse>> getAvailableDrivers(
             @RequestParam(required = false) String serviceArea) {
         return ResponseEntity.ok(driverService.getAvailableDrivers(serviceArea));
