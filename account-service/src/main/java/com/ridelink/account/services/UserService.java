@@ -14,7 +14,7 @@ public class UserService {
 
     public UserResponse getUserProfile(String userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("පරිශීලකයා හමු නොවීය!"));
+                .orElseThrow(() -> new RuntimeException("User not found!"));
 
         return UserResponse.builder()
                 .id(user.getId())

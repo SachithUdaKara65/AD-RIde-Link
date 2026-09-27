@@ -16,14 +16,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
-@Tag(name = "User Management", description = "පරිශීලක ගිණුම් විස්තර ලබා ගැනීමේ Endpoints")
+@Tag(name = "User Management", description = "Endpoints for retrieving user account details")
 public class UserController {
 
     private final UserService userService;
 
     @GetMapping("/me")
     @Operation(
-            summary = "ලොග් වී සිටින පරිශීලකයාගේ විස්තර ලබා ගැනීම",
+            summary = "Getting the logged in user's details",
             security = @SecurityRequirement(name = "bearerAuth")
     )
     public ResponseEntity<UserResponse> getCurrentUser(@AuthenticationPrincipal User user) {
