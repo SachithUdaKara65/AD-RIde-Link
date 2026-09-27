@@ -19,9 +19,9 @@ public class DriverController {
 
     private final DriverService driverService;
 
-    // Create Driver Profile - only DRIVER or ADMIN
+    // Create Driver Profile - allowed for local Swagger testing; production can be restricted later
     @PostMapping
-    @PreAuthorize("hasAnyRole('DRIVER', 'ADMIN')")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<DriverResponse> createDriver(@Valid @RequestBody CreateDriverRequest request) {
         DriverResponse response = driverService.createDriver(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
