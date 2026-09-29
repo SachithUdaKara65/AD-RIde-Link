@@ -17,7 +17,6 @@ import java.util.Map;
 @RestControllerAdvice(basePackages = "com.ridelink.account.controllers")
 public class GlobalExceptionHandler {
 
-    // Model Validation errors (@NotBlank, @Email, @Size ආදිය) අල්ලා ගැනීම
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
