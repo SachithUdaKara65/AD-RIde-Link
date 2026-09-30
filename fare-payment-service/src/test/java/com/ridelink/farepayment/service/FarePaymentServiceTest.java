@@ -20,6 +20,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -100,5 +101,30 @@ class FarePaymentServiceTest {
         assertEquals("payment-001", response.getId());
         assertEquals(PaymentStatus.PENDING, response.getStatus());
         assertEquals("620.00", response.getAmount().toPlainString());
+    }
+
+    @Test
+    void shouldRejectUnsupportedServiceType() {
+        FareQuoteRequest request = new FareQuoteRequest();
+        request.setRideId("ride-003");
+        request.setPassengerId("passenger-003");
+        request.setDriverId("driver-003");
+        request.setDistanceKm(5.0);
+        request.setDurationMinutes(10);
+        request.setServiceType("ECONOMY");
+
+        assertThrows(IllegalArgumentException.class, () -> farePaymentService.createFareQuote(request));
+    }
+
+    @Test
+    void shouldRejectPaymentWithoutPaymentMethod() {
+        CreatePaymentRequest request = new CreatePaymentRequest();
+        request.setRideId("ride-004");
+        request.setPassengerId("passenger-004");
+        request.setDriverId("driver-004");
+        request.setAmount(new BigDecimal("100.00"));
+        request.setPaymentMethod(" ");
+
+        assertThrows(IllegalArgumentException.class, () -> farePaymentService.createPayment(request));
     }
 }
