@@ -28,6 +28,9 @@ public class FarePaymentService {
     private final PaymentRepository paymentRepository;
 
     public FareQuoteResponse createFareQuote(FareQuoteRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Fare quote request is required");
+        }
         validateQuoteRequest(request);
 
         String serviceType = request.getServiceType().trim().toUpperCase();
@@ -70,14 +73,22 @@ public class FarePaymentService {
     }
 
     public FareQuoteResponse getFareByRideId(String rideId) {
+        requireText(rideId, "Ride ID");
         Fare fare = fareRepository.findByRideId(rideId)
                 .orElseThrow(() -> new ResourceNotFoundException("Fare not found for ride ID: " + rideId));
         return mapToQuoteResponse(fare);
     }
 
     public PaymentResponse createPayment(CreatePaymentRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Payment request is required");
+        }
+        requireText(request.getRideId(), "Ride ID");
+        requireText(request.getPassengerId(), "Passenger ID");
+        requireText(request.getDriverId(), "Driver ID");
+        requireText(request.getPaymentMethod(), "Payment method");
         if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException("Payment amount must be greater than zero");
+            throw new IllegalArgumentException("Payment amount must be greater than zero");
         }
 
         Payment payment = Payment.builder()
@@ -99,18 +110,25 @@ public class FarePaymentService {
     }
 
     public PaymentResponse getPaymentById(String id) {
+        requireText(id, "Payment ID");
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id: " + id));
         return mapToPaymentResponse(payment);
     }
 
     public List<PaymentResponse> getPaymentsByRideId(String rideId) {
+        requireText(rideId, "Ride ID");
         return paymentRepository.findByRideId(rideId).stream()
                 .map(this::mapToPaymentResponse)
                 .toList();
     }
 
     public PaymentResponse updatePaymentStatus(String id, UpdatePaymentStatusRequest request) {
+        requireText(id, "Payment ID");
+        if (request == null) {
+            throw new IllegalArgumentException("Payment status request is required");
+        }
+        requireText(request.getStatus(), "Payment status");
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id: " + id));
 
@@ -123,12 +141,27 @@ public class FarePaymentService {
     }
 
     private void validateQuoteRequest(FareQuoteRequest request) {
+        requireText(request.getRideId(), "Ride ID");
+        requireText(request.getPassengerId(), "Passenger ID");
+        requireText(request.getDriverId(), "Driver ID");
+        requireText(request.getServiceType(), "Service type");
         if (request.getDistanceKm() == null || request.getDistanceKm() <= 0) {
-            throw new RuntimeException("Distance must be greater than zero");
+            throw new IllegalArgumentException("Distance must be greater than zero");
         }
 
         if (request.getDurationMinutes() == null || request.getDurationMinutes() <= 0) {
-            throw new RuntimeException("Duration must be greater than zero");
+            throw new IllegalArgumentException("Duration must be greater than zero");
+        }
+
+        String serviceType = request.getServiceType().trim().toUpperCase();
+        if (!serviceType.equals("STANDARD") && !serviceType.equals("PREMIUM") && !serviceType.equals("XL")) {
+            throw new IllegalArgumentException("Unsupported service type: " + request.getServiceType());
+        }
+    }
+
+    private void requireText(String value, String fieldName) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(fieldName + " is required");
         }
     }
 
