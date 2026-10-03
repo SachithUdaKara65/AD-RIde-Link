@@ -11,7 +11,7 @@ public interface DriverRepository extends MongoRepository<Driver, String> {
 
     List<Driver> findByAvailabilityAndStatus(String availability, String status);
 
-    List<Driver> findByAvailabilityAndStatusAndServiceAreaIgnoreCase(
+    List<Driver> findByAvailabilityAndStatusAndServiceArea(
             String availability,
             String status,
             String serviceArea);

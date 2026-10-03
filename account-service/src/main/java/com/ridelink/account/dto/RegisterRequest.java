@@ -23,10 +23,6 @@ public class RegisterRequest {
 
     private String phone;
 
-    private String licenseNumber;
-
-    private String serviceArea;
-
     @NotNull(message = "Role is required (PASSENGER, DRIVER, ADMIN)")
     private Role role;
 }

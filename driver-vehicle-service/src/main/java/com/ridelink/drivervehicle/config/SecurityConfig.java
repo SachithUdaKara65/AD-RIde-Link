@@ -4,6 +4,7 @@ import com.ridelink.drivervehicle.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -24,6 +25,7 @@ public class SecurityConfig {
                 http
                                 .csrf(csrf -> csrf.disable())
                                 .authorizeHttpRequests(auth -> auth
+                                                // Allow public Swagger/test endpoints and the driver creation endpoint for local testing
                                                 .requestMatchers(
                                                                 "/swagger-ui/**",
                                                                 "/swagger-ui.html",
@@ -32,21 +34,12 @@ public class SecurityConfig {
                                                                 "/actuator/**",
                                                                 "/api/test/**",
                                                                 "/api/drivers/available",
-                                                                "/api/drivers/available/**",
-                                                                "/api/drivers/internal")
+                                                                "/api/drivers/available/**")
                                                 .permitAll()
+                                                .requestMatchers(HttpMethod.POST, "/api/drivers").permitAll()
 
                                                 // All other endpoints need a valid JWT
                                                 .anyRequest().authenticated())
-                                .exceptionHandling(exceptions -> exceptions
-                                                .authenticationEntryPoint((request, response, exception) ->
-                                                                response.sendError(
-                                                                                401,
-                                                                                "Missing, expired, or invalid Bearer token."))
-                                                .accessDeniedHandler((request, response, exception) ->
-                                                                response.sendError(
-                                                                                403,
-                                                                                "The authenticated account does not have the required role.")))
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

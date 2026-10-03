@@ -22,15 +22,12 @@ public class DriverService {
 
     // Create Driver Profile
     public DriverResponse createDriver(CreateDriverRequest request) {
-        List<Driver> existingProfiles = driverRepository.findByAccountId(request.getAccountId());
-        if (!existingProfiles.isEmpty()) {
-            return mapToResponse(existingProfiles.get(0));
-        }
-
         Driver driver = new Driver();
         driver.setAccountId(request.getAccountId());
+        driver.setFullName(request.getFullName());
+        driver.setPhone(request.getPhone());
         driver.setLicenseNumber(request.getLicenseNumber());
-        driver.setServiceArea(normalizeServiceArea(request.getServiceArea()));
+        driver.setServiceArea(request.getServiceArea());
         driver.setStatus("ACTIVE");
         driver.setAvailability("OFFLINE");
         driver.setCreatedAt(LocalDateTime.now());
@@ -42,12 +39,15 @@ public class DriverService {
 
     // Get Driver by ID
     public DriverResponse getDriverById(String id) {
-        return mapToResponse(findDriverByProfileOrAccountId(id));
+        Driver driver = driverRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver not found with id: " + id));
+        return mapToResponse(driver);
     }
 
     // Update Availability
     public DriverResponse updateAvailability(String id, UpdateAvailabilityRequest request) {
-        Driver driver = findDriverByProfileOrAccountId(id);
+        Driver driver = driverRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver not found with id: " + id));
 
         String availability = request.getAvailability().toUpperCase();
         if (!List.of("AVAILABLE", "BUSY", "OFFLINE").contains(availability)) {
@@ -63,7 +63,8 @@ public class DriverService {
 
     // Update Location
     public DriverResponse updateLocation(String id, UpdateLocationRequest request) {
-        Driver driver = findDriverByProfileOrAccountId(id);
+        Driver driver = driverRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver not found with id: " + id));
 
         driver.setCurrentLatitude(request.getLatitude());
         driver.setCurrentLongitude(request.getLongitude());
@@ -78,8 +79,8 @@ public class DriverService {
         List<Driver> drivers;
 
         if (serviceArea != null && !serviceArea.isBlank()) {
-            drivers = driverRepository.findByAvailabilityAndStatusAndServiceAreaIgnoreCase(
-                    "AVAILABLE", "ACTIVE", normalizeServiceArea(serviceArea));
+            drivers = driverRepository.findByAvailabilityAndStatusAndServiceArea(
+                    "AVAILABLE", "ACTIVE", serviceArea);
         } else {
             drivers = driverRepository.findByAvailabilityAndStatus("AVAILABLE", "ACTIVE");
         }
@@ -89,15 +90,13 @@ public class DriverService {
                 .collect(Collectors.toList());
     }
 
-    private String normalizeServiceArea(String serviceArea) {
-        return serviceArea == null ? null : serviceArea.trim();
-    }
-
     // Add Vehicle to Driver
     public Vehicle addVehicle(String driverId, CreateVehicleRequest request) {
-        Driver driver = findDriverByProfileOrAccountId(driverId);
+        // Check if driver exists
+        driverRepository.findById(driverId)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver not found with id: " + driverId));
         Vehicle vehicle = new Vehicle();
-        vehicle.setDriverId(driver.getId());
+        vehicle.setDriverId(driverId);
         vehicle.setMake(request.getMake());
         vehicle.setModel(request.getModel());
         vehicle.setYear(request.getYear());
@@ -111,8 +110,7 @@ public class DriverService {
 
     // Get Vehicles of a Driver
     public List<Vehicle> getVehiclesByDriver(String driverId) {
-        Driver driver = findDriverByProfileOrAccountId(driverId);
-        return vehicleRepository.findByDriverId(driver.getId());
+        return vehicleRepository.findByDriverId(driverId);
     }
 
     // Helper method to convert Entity → Response DTO
@@ -120,6 +118,8 @@ public class DriverService {
         DriverResponse response = new DriverResponse();
         response.setId(driver.getId());
         response.setAccountId(driver.getAccountId());
+        response.setFullName(driver.getFullName());
+        response.setPhone(driver.getPhone());
         response.setLicenseNumber(driver.getLicenseNumber());
         response.setStatus(driver.getStatus());
         response.setAvailability(driver.getAvailability());
@@ -129,12 +129,5 @@ public class DriverService {
         response.setCreatedAt(driver.getCreatedAt());
         response.setUpdatedAt(driver.getUpdatedAt());
         return response;
-    }
-
-    private Driver findDriverByProfileOrAccountId(String id) {
-        return driverRepository.findById(id)
-                .or(() -> driverRepository.findByAccountId(id).stream().findFirst())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Driver profile not found for driver or account id: " + id));
     }
 }

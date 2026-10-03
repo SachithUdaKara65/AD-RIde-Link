@@ -14,8 +14,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -39,34 +37,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (jwtUtil.isTokenValid(jwt) && SecurityContextHolder.getContext().getAuthentication() == null) {
             String username = jwtUtil.extractUsername(jwt);
-            String role = normalizeRole(jwtUtil.extractRole(jwt));
+            String role = jwtUtil.extractRole(jwt);
 
-            if (username != null && !username.isBlank() && role != null) {
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        username,
-                        null,
-                        List.of(new SimpleGrantedAuthority("ROLE_" + role)));
+            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                    username,
+                    null,
+                    List.of(new SimpleGrantedAuthority("ROLE_" + role)));
 
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
-            }
+            authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(authToken);
         }
 
         filterChain.doFilter(request, response);
-    }
-
-    static String normalizeRole(String role) {
-        if (role == null || role.isBlank()) {
-            return null;
-        }
-
-        String normalizedRole = role.trim().toUpperCase(Locale.ROOT);
-        if (normalizedRole.startsWith("ROLE_")) {
-            normalizedRole = normalizedRole.substring("ROLE_".length());
-        }
-
-        return Set.of("DRIVER", "ADMIN", "PASSENGER").contains(normalizedRole)
-                ? normalizedRole
-                : null;
     }
 }
