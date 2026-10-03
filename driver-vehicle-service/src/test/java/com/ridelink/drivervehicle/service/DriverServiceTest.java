@@ -41,8 +41,6 @@ class DriverServiceTest {
         driver = new Driver();
         driver.setId("driver-001");
         driver.setAccountId("acc-001");
-        driver.setFullName("Kamal Perera");
-        driver.setPhone("0771234567");
         driver.setLicenseNumber("B1234567");
         driver.setStatus("ACTIVE");
         driver.setAvailability("OFFLINE");
@@ -56,11 +54,10 @@ class DriverServiceTest {
         // Arrange
         CreateDriverRequest request = new CreateDriverRequest();
         request.setAccountId("acc-001");
-        request.setFullName("Kamal Perera");
-        request.setPhone("0771234567");
         request.setLicenseNumber("B1234567");
         request.setServiceArea("Colombo");
 
+        when(driverRepository.findByAccountId("acc-001")).thenReturn(List.of());
         when(driverRepository.save(any(Driver.class))).thenReturn(driver);
 
         // Act
@@ -68,9 +65,23 @@ class DriverServiceTest {
 
         // Assert
         assertNotNull(response);
-        assertEquals("Kamal Perera", response.getFullName());
+        assertEquals("acc-001", response.getAccountId());
+        assertEquals("B1234567", response.getLicenseNumber());
         assertEquals("OFFLINE", response.getAvailability());
         verify(driverRepository, times(1)).save(any(Driver.class));
+    }
+
+    @Test
+    void createDriver_WhenProfileAlreadyExists_ShouldNotCreateDuplicate() {
+        CreateDriverRequest request = new CreateDriverRequest();
+        request.setAccountId("acc-001");
+        request.setLicenseNumber("B1234567");
+        when(driverRepository.findByAccountId("acc-001")).thenReturn(List.of(driver));
+
+        DriverResponse response = driverService.createDriver(request);
+
+        assertEquals("driver-001", response.getId());
+        verify(driverRepository, never()).save(any(Driver.class));
     }
 
     @Test
@@ -81,7 +92,7 @@ class DriverServiceTest {
 
         assertNotNull(response);
         assertEquals("driver-001", response.getId());
-        assertEquals("Kamal Perera", response.getFullName());
+        assertEquals("acc-001", response.getAccountId());
     }
 
     @Test
