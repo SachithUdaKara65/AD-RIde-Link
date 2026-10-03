@@ -9,8 +9,6 @@ public class DriverResponse {
 
     private String id;
     private String accountId;
-    private String fullName;
-    private String phone;
     private String licenseNumber;
     private String status;
     private String availability;
