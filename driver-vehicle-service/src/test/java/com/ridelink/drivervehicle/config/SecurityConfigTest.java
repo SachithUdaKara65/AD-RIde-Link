@@ -27,8 +27,6 @@ class SecurityConfigTest {
     void createDriverEndpoint_shouldBeAccessibleWithoutAuthenticationForSwaggerTesting() throws Exception {
         CreateDriverRequest request = new CreateDriverRequest();
         request.setAccountId("acc-100");
-        request.setFullName("Test Driver");
-        request.setPhone("0771234567");
         request.setLicenseNumber("B1234567");
         request.setServiceArea("Colombo");
 
