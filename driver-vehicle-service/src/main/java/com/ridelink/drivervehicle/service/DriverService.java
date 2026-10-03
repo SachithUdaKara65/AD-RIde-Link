@@ -22,10 +22,13 @@ public class DriverService {
 
     // Create Driver Profile
     public DriverResponse createDriver(CreateDriverRequest request) {
+        List<Driver> existingProfiles = driverRepository.findByAccountId(request.getAccountId());
+        if (!existingProfiles.isEmpty()) {
+            return mapToResponse(existingProfiles.get(0));
+        }
+
         Driver driver = new Driver();
         driver.setAccountId(request.getAccountId());
-        driver.setFullName(request.getFullName());
-        driver.setPhone(request.getPhone());
         driver.setLicenseNumber(request.getLicenseNumber());
         driver.setServiceArea(request.getServiceArea());
         driver.setStatus("ACTIVE");
@@ -118,8 +121,6 @@ public class DriverService {
         DriverResponse response = new DriverResponse();
         response.setId(driver.getId());
         response.setAccountId(driver.getAccountId());
-        response.setFullName(driver.getFullName());
-        response.setPhone(driver.getPhone());
         response.setLicenseNumber(driver.getLicenseNumber());
         response.setStatus(driver.getStatus());
         response.setAvailability(driver.getAvailability());
