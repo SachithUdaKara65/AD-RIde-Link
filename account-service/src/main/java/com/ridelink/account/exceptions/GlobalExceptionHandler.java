@@ -1,6 +1,8 @@
 package com.ridelink.account.exceptions;
 
 import com.ridelink.account.dto.ErrorResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import io.swagger.v3.oas.annotations.Hidden;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +18,21 @@ import java.util.Map;
 @Hidden
 @RestControllerAdvice(basePackages = "com.ridelink.account.controllers")
 public class GlobalExceptionHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(DriverProfileProvisioningException.class)
+    public ResponseEntity<ErrorResponse> handleDriverProfileProvisioningException(
+            DriverProfileProvisioningException ex) {
+        logger.error("Driver profile provisioning failed during account registration.", ex);
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+                .error("Driver Service Unavailable")
+                .message(ex.getMessage())
+                .build();
+        return new ResponseEntity<>(errorResponse, HttpStatus.SERVICE_UNAVAILABLE);
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {

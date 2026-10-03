@@ -1,6 +1,8 @@
 package com.ridelink.account.services;
 
 import com.ridelink.account.dto.AuthResponse;
+import com.ridelink.account.dto.DriverProfileRequest;
+import com.ridelink.account.exceptions.DriverProfileProvisioningException;
 import com.ridelink.account.dto.LoginRequest;
 import com.ridelink.account.dto.RegisterRequest;
 import com.ridelink.account.models.Role;
@@ -12,6 +14,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,6 +36,9 @@ class AuthServiceTest {
 
     @Mock
     private JwtTokenProvider jwtTokenProvider;
+
+    @Mock
+    private DriverProfileClient driverProfileClient;
 
     @InjectMocks
     private AuthService authService;
@@ -77,6 +83,77 @@ class AuthServiceTest {
         assertEquals("mock_token", response.getToken());
         assertEquals("pathum@example.com", response.getEmail());
         verify(userRepository, times(1)).save(any(User.class));
+        verifyNoInteractions(driverProfileClient);
+    }
+
+    @Test
+    @DisplayName("Register Driver - Provisions a driver profile")
+    void registerDriver_Success() {
+        User driverUser = User.builder()
+                .id("driver-account-123")
+                .name("Pathum Madhusanka")
+                .email("pathum@example.com")
+                .phone("0771234567")
+                .role(Role.DRIVER)
+                .status("ACTIVE")
+                .build();
+        registerRequest.setRole(Role.DRIVER);
+        registerRequest.setPhone("0771234567");
+        registerRequest.setLicenseNumber("B1234567");
+        registerRequest.setServiceArea("Colombo");
+
+        when(userRepository.existsByEmail(anyString())).thenReturn(false);
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded_pass");
+        when(userRepository.save(any(User.class))).thenReturn(driverUser);
+        when(jwtTokenProvider.generateToken(anyString(), anyString(), anyString())).thenReturn("mock_token");
+
+        AuthResponse response = authService.register(registerRequest);
+
+        assertEquals(Role.DRIVER, response.getRole());
+        ArgumentCaptor<DriverProfileRequest> profileRequest =
+                ArgumentCaptor.forClass(DriverProfileRequest.class);
+        verify(driverProfileClient).createProfile(profileRequest.capture());
+        assertEquals("driver-account-123", profileRequest.getValue().accountId());
+        assertEquals("B1234567", profileRequest.getValue().licenseNumber());
+        assertEquals("Colombo", profileRequest.getValue().serviceArea());
+        verify(userRepository, never()).delete(any(User.class));
+    }
+
+    @Test
+    @DisplayName("Register Driver - Rolls back account when profile provisioning fails")
+    void registerDriver_ProfileProvisioningFails_RollsBackAccount() {
+        User driverUser = User.builder()
+                .id("driver-account-123")
+                .name("Pathum Madhusanka")
+                .email("pathum@example.com")
+                .phone("0771234567")
+                .role(Role.DRIVER)
+                .status("ACTIVE")
+                .build();
+        registerRequest.setRole(Role.DRIVER);
+        registerRequest.setPhone("0771234567");
+        registerRequest.setLicenseNumber("B1234567");
+        when(userRepository.existsByEmail(anyString())).thenReturn(false);
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded_pass");
+        when(userRepository.save(any(User.class))).thenReturn(driverUser);
+        doThrow(new DriverProfileProvisioningException("Driver service unavailable"))
+                .when(driverProfileClient).createProfile(any());
+
+        assertThrows(DriverProfileProvisioningException.class, () -> authService.register(registerRequest));
+
+        verify(userRepository).delete(driverUser);
+        verify(jwtTokenProvider, never()).generateToken(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("Register Driver - Requires phone and license number")
+    void registerDriver_MissingRequiredProfileData_DoesNotSaveAccount() {
+        registerRequest.setRole(Role.DRIVER);
+
+        assertThrows(IllegalArgumentException.class, () -> authService.register(registerRequest));
+
+        verify(userRepository, never()).save(any(User.class));
+        verifyNoInteractions(driverProfileClient);
     }
 
     @Test
