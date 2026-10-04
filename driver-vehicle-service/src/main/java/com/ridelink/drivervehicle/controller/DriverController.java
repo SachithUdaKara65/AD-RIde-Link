@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,12 +20,23 @@ public class DriverController {
 
     private final DriverService driverService;
 
-    // Create Driver Profile - allowed for local Swagger testing; production can be restricted later
-    @PostMapping
-    @PreAuthorize("permitAll()")
-    public ResponseEntity<DriverResponse> createDriver(@Valid @RequestBody CreateDriverRequest request) {
+    @PostMapping("/me/profile")
+    @PreAuthorize("hasRole('DRIVER')")
+    public ResponseEntity<DriverResponse> provisionDriverProfile(
+            Authentication authentication,
+            @Valid @RequestBody DriverProfileRequest profileRequest) {
+        CreateDriverRequest request = new CreateDriverRequest();
+        request.setAccountId(authentication.getName());
+        request.setLicenseNumber(profileRequest.getLicenseNumber());
+        request.setServiceArea(profileRequest.getServiceArea());
         DriverResponse response = driverService.createDriver(request);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/me/profile")
+    @PreAuthorize("hasRole('DRIVER')")
+    public ResponseEntity<DriverResponse> getMyDriverProfile(Authentication authentication) {
+        return ResponseEntity.ok(driverService.getDriverByAccountId(authentication.getName()));
     }
 
     // Get Driver by ID
