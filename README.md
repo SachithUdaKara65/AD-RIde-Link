@@ -37,7 +37,7 @@ RideLink is a backend ride-sharing system developed using Spring Boot microservi
 - Do not commit passwords, API keys, or database credentials.
 - Each service must maintain its own database boundary.
 - Account Service runs Spring Boot 4 and uses `spring.mongodb.uri` and `spring.mongodb.database`. Its default URI is `mongodb://localhost:27017/ridelink_account_db`, overridable with `ACCOUNT_MONGO_URI`; it refuses to start if the effective database is not `ridelink_account_db`.
-- Driver & Vehicle Service runs Spring Boot 3 and uses `spring.data.mongodb.uri` and `spring.data.mongodb.database`. Set `DRIVER_MONGO_URI` in its local `.env` file or process environment; it refuses to start if the effective database is not `driver_vehicle_db`.
+- Driver & Vehicle Service runs Spring Boot 3 and uses `spring.data.mongodb.uri` and `spring.data.mongodb.database`. Set `DRIVER_MONGO_URI` in its local `.env` file; that ignored file maps it to `spring.data.mongodb.uri`. It refuses to start if the effective database is not `driver_vehicle_db`.
 - Account Service persists `User` documents only through its own `UserRepository`. Driver & Vehicle Service persists only driver and vehicle domain models; its driver records and API DTOs must not contain account name, email, phone, password, or role. Cross-service data exchange, when needed, must use HTTP APIs and never another service's MongoDB connection or collections.
 - Document API changes before integration.
 
