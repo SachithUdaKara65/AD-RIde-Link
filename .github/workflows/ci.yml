@@ -1,0 +1,67 @@
+name: RideLink CI
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - account-service
+          - driver-vehicle-service
+          - ride-management-service
+          - fare-payment-service
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      ACCOUNT_MONGO_URI: mongodb://localhost:27017/ridelink_ci_account_db
+      DRIVER_MONGO_URI: mongodb://localhost:27017/ridelink_ci_driver_db
+      RIDE_MONGO_URI: mongodb://localhost:27017/ridelink_ci_ride_db
+      FARE_MONGO_URI: mongodb://localhost:27017/ridelink_ci_fare_db
+      JWT_SECRET: ci-only-secret-key-with-at-least-32-characters
+      JWT_EXPIRATION_MS: "86400000"
+      JWT_EXPIRATION: "86400000"
+      APP_JWT_SECRET: ci-only-secret-key-with-at-least-32-characters
+      APP_JWT_EXPIRATION_MS: "86400000"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Make Maven Wrapper executable
+        working-directory: ${{ matrix.service }}
+        run: chmod +x ./mvnw
+
+      - name: Run tests
+        working-directory: ${{ matrix.service }}
+        run: ./mvnw -B test

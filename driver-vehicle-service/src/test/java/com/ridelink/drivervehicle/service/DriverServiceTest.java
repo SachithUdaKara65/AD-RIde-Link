@@ -1,10 +1,12 @@
 package com.ridelink.drivervehicle.service;
 
 import com.ridelink.drivervehicle.dto.CreateDriverRequest;
+import com.ridelink.drivervehicle.dto.CreateVehicleRequest;
 import com.ridelink.drivervehicle.dto.DriverResponse;
 import com.ridelink.drivervehicle.dto.UpdateAvailabilityRequest;
 import com.ridelink.drivervehicle.exception.ResourceNotFoundException;
 import com.ridelink.drivervehicle.model.Driver;
+import com.ridelink.drivervehicle.model.Vehicle;
 import com.ridelink.drivervehicle.repository.DriverRepository;
 import com.ridelink.drivervehicle.repository.VehicleRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -96,6 +98,23 @@ class DriverServiceTest {
     }
 
     @Test
+    void addVehicle_WhenAccountIdIsUsed_ShouldAttachVehicleToDriverProfile() {
+        CreateVehicleRequest request = new CreateVehicleRequest();
+        request.setMake("Toyota");
+        request.setModel("Corolla");
+        request.setYear(2022);
+        request.setLicensePlate("ABC-123");
+        when(driverRepository.findById("acc-001")).thenReturn(Optional.empty());
+        when(driverRepository.findByAccountId("acc-001")).thenReturn(List.of(driver));
+        when(vehicleRepository.save(any(Vehicle.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Vehicle vehicle = driverService.addVehicle("acc-001", request);
+
+        assertEquals("driver-001", vehicle.getDriverId());
+        verify(vehicleRepository).save(any(Vehicle.class));
+    }
+
+    @Test
     void getDriverById_WhenDriverNotFound_ShouldThrowException() {
         when(driverRepository.findById("invalid-id")).thenReturn(Optional.empty());
 
@@ -129,5 +148,21 @@ class DriverServiceTest {
         assertFalse(result.isEmpty());
         assertEquals(1, result.size());
         assertEquals("AVAILABLE", result.get(0).getAvailability());
+    }
+
+    @Test
+    void getAvailableDrivers_ShouldTrimServiceAreaAndMatchIgnoringCase() {
+        driver.setAvailability("AVAILABLE");
+        driver.setServiceArea("Hikkaduwa");
+        when(driverRepository.findByAvailabilityAndStatusAndServiceAreaIgnoreCase(
+                "AVAILABLE", "ACTIVE", "hikkaduwa"))
+                .thenReturn(List.of(driver));
+
+        List<DriverResponse> result = driverService.getAvailableDrivers(" hikkaduwa ");
+
+        assertEquals(1, result.size());
+        assertEquals("Hikkaduwa", result.get(0).getServiceArea());
+        verify(driverRepository).findByAvailabilityAndStatusAndServiceAreaIgnoreCase(
+                "AVAILABLE", "ACTIVE", "hikkaduwa");
     }
 }

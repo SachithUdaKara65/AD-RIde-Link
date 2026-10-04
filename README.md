@@ -60,6 +60,26 @@ RideLink is a backend ride-sharing system developed using Spring Boot microservi
 
 Each service includes a Maven Wrapper, so a separate Maven installation is not required.
 
+## Driver onboarding
+
+Register a driver through Account Service with `role` set to `DRIVER`. Account Service
+returns a `userId` and bearer token. Use that token to create the driver's profile through
+Driver & Vehicle Service before using driver or vehicle endpoints.
+Both services must be configured with the same Base64-encoded `JWT_SECRET` and
+`JWT_EXPIRATION_MS`; Driver & Vehicle Service reads these from its environment or local
+`.env` file just like Account Service.
+Driver login looks up the profile and returns its `driverId`; if the driver has not created
+a profile yet, create it through `POST /api/drivers/me/profile` using the token returned at
+registration, then log in again.
+
+For a driver account that was registered before automatic provisioning was available, use
+`POST /api/drivers/me/profile` on Driver & Vehicle Service with the driver's bearer token
+and a JSON body containing `licenseNumber` and optional `serviceArea`. The response contains
+the `driverId` to use with vehicle, availability, and location endpoints.
+New profiles start as `OFFLINE`; set availability to `AVAILABLE` with
+`PATCH /api/drivers/{driverId}/availability` before expecting the driver in
+`GET /api/drivers/available`. Service-area matching ignores case and surrounding spaces.
+
 
 ## Technical Report
 
