@@ -30,7 +30,9 @@ public class DriverService {
         Driver driver = new Driver();
         driver.setAccountId(request.getAccountId());
         driver.setLicenseNumber(request.getLicenseNumber());
-        driver.setServiceArea(request.getServiceArea());
+        driver.setServiceArea(request.getServiceArea() != null
+                ? request.getServiceArea().trim()
+                : null);
         driver.setStatus("ACTIVE");
         driver.setAvailability("OFFLINE");
         driver.setCreatedAt(LocalDateTime.now());
@@ -42,15 +44,22 @@ public class DriverService {
 
     // Get Driver by ID
     public DriverResponse getDriverById(String id) {
-        Driver driver = driverRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Driver not found with id: " + id));
+        Driver driver = findDriver(id);
+        return mapToResponse(driver);
+    }
+
+    public DriverResponse getDriverByAccountId(String accountId) {
+        Driver driver = driverRepository.findByAccountId(accountId).stream()
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Driver profile not found for account: " + accountId
+                                + ". Create the profile with POST /api/drivers/me/profile."));
         return mapToResponse(driver);
     }
 
     // Update Availability
     public DriverResponse updateAvailability(String id, UpdateAvailabilityRequest request) {
-        Driver driver = driverRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Driver not found with id: " + id));
+        Driver driver = findDriver(id);
 
         String availability = request.getAvailability().toUpperCase();
         if (!List.of("AVAILABLE", "BUSY", "OFFLINE").contains(availability)) {
@@ -66,8 +75,7 @@ public class DriverService {
 
     // Update Location
     public DriverResponse updateLocation(String id, UpdateLocationRequest request) {
-        Driver driver = driverRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Driver not found with id: " + id));
+        Driver driver = findDriver(id);
 
         driver.setCurrentLatitude(request.getLatitude());
         driver.setCurrentLongitude(request.getLongitude());
@@ -82,8 +90,8 @@ public class DriverService {
         List<Driver> drivers;
 
         if (serviceArea != null && !serviceArea.isBlank()) {
-            drivers = driverRepository.findByAvailabilityAndStatusAndServiceArea(
-                    "AVAILABLE", "ACTIVE", serviceArea);
+            drivers = driverRepository.findByAvailabilityAndStatusAndServiceAreaIgnoreCase(
+                    "AVAILABLE", "ACTIVE", serviceArea.trim());
         } else {
             drivers = driverRepository.findByAvailabilityAndStatus("AVAILABLE", "ACTIVE");
         }
@@ -95,11 +103,9 @@ public class DriverService {
 
     // Add Vehicle to Driver
     public Vehicle addVehicle(String driverId, CreateVehicleRequest request) {
-        // Check if driver exists
-        driverRepository.findById(driverId)
-                .orElseThrow(() -> new ResourceNotFoundException("Driver not found with id: " + driverId));
+        Driver driver = findDriver(driverId);
         Vehicle vehicle = new Vehicle();
-        vehicle.setDriverId(driverId);
+        vehicle.setDriverId(driver.getId());
         vehicle.setMake(request.getMake());
         vehicle.setModel(request.getModel());
         vehicle.setYear(request.getYear());
@@ -113,7 +119,17 @@ public class DriverService {
 
     // Get Vehicles of a Driver
     public List<Vehicle> getVehiclesByDriver(String driverId) {
-        return vehicleRepository.findByDriverId(driverId);
+        Driver driver = findDriver(driverId);
+        return vehicleRepository.findByDriverId(driver.getId());
+    }
+
+    private Driver findDriver(String identifier) {
+        return driverRepository.findById(identifier)
+                .or(() -> driverRepository.findByAccountId(identifier).stream().findFirst())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Driver profile not found for identifier: " + identifier
+                                + ". Existing accounts must first create a driver profile with "
+                                + "POST /api/drivers/me/profile using a DRIVER token."));
     }
 
     // Helper method to convert Entity → Response DTO

@@ -1,6 +1,7 @@
 package com.ridelink.account.services;
 
 import com.ridelink.account.dto.AuthResponse;
+import com.ridelink.account.dto.DriverProfileProvisionResponse;
 import com.ridelink.account.dto.LoginRequest;
 import com.ridelink.account.dto.RegisterRequest;
 import com.ridelink.account.models.Role;
@@ -33,6 +34,9 @@ class AuthServiceTest {
 
     @Mock
     private JwtTokenProvider jwtTokenProvider;
+
+    @Mock
+    private DriverProfileClient driverProfileClient;
 
     @InjectMocks
     private AuthService authService;
@@ -77,6 +81,27 @@ class AuthServiceTest {
         assertEquals("mock_token", response.getToken());
         assertEquals("pathum@example.com", response.getEmail());
         verify(userRepository, times(1)).save(any(User.class));
+        verifyNoInteractions(driverProfileClient);
+    }
+
+    @Test
+    @DisplayName("Register Driver - Does Not Require Profile Details")
+    void register_Driver_DoesNotRequireLicenseOrServiceArea() {
+        registerRequest.setRole(Role.DRIVER);
+        when(userRepository.existsByEmail(anyString())).thenReturn(false);
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded_pass");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            user.setId("usr-driver");
+            return user;
+        });
+        when(jwtTokenProvider.generateToken("usr-driver", "pathum@example.com", "DRIVER"))
+                .thenReturn("driver_token");
+        AuthResponse response = authService.register(registerRequest);
+
+        assertEquals("usr-driver", response.getUserId());
+        assertNull(response.getDriverId());
+        verifyNoInteractions(driverProfileClient);
     }
 
     @Test
@@ -104,6 +129,42 @@ class AuthServiceTest {
         assertNotNull(response);
         assertEquals("mock_token", response.getToken());
         assertEquals("usr123", response.getUserId());
+        assertNull(response.getDriverId());
+        verifyNoInteractions(driverProfileClient);
+    }
+
+    @Test
+    @DisplayName("Login Driver - Returns Driver Profile ID")
+    void login_Driver_ReturnsDriverId() {
+        sampleUser.setRole(Role.DRIVER);
+        when(userRepository.findByEmail("pathum@example.com")).thenReturn(Optional.of(sampleUser));
+        when(passwordEncoder.matches("raw_password", "encoded_pass")).thenReturn(true);
+        when(jwtTokenProvider.generateToken("usr123", "pathum@example.com", "DRIVER"))
+                .thenReturn("driver_token");
+        when(driverProfileClient.getProfile("driver_token"))
+                .thenReturn(new DriverProfileProvisionResponse("driver-profile-123"));
+
+        AuthResponse response = authService.login(loginRequest);
+
+        assertEquals("driver-profile-123", response.getDriverId());
+        verify(driverProfileClient).getProfile("driver_token");
+    }
+
+    @Test
+    @DisplayName("Login Driver - Allows Login Before Profile Is Created")
+    void login_DriverWithoutProfile_ReturnsTokenAndNullDriverId() {
+        sampleUser.setRole(Role.DRIVER);
+        when(userRepository.findByEmail("pathum@example.com")).thenReturn(Optional.of(sampleUser));
+        when(passwordEncoder.matches("raw_password", "encoded_pass")).thenReturn(true);
+        when(jwtTokenProvider.generateToken("usr123", "pathum@example.com", "DRIVER"))
+                .thenReturn("driver_token");
+        when(driverProfileClient.getProfile("driver_token"))
+                .thenReturn(null);
+
+        AuthResponse response = authService.login(loginRequest);
+
+        assertEquals("driver_token", response.getToken());
+        assertNull(response.getDriverId());
     }
 
     @Test
